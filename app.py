@@ -7,12 +7,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseDownload
 import io
 
-st.write("Full client config:", st.secrets["client_secrets"])
-
-# Set page config
+# Set page config (must be the first Streamlit command)
 st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
 
-
+st.write("Full client config:", st.secrets["client_secrets"])
 
 # Custom CSS to inject
 st.markdown("""
@@ -60,14 +58,14 @@ def authenticate_google_drive():
     try:
         client_config = st.secrets["client_secrets"]
         st.write("Client config keys:", list(client_config.keys()))
-        
+
         if 'web' not in client_config:
             raise ValueError("Client secrets must contain a 'web' key")
-        
+
         web_config = client_config['web']
         st.write("Web config keys:", list(web_config.keys()))
         st.write("Redirect URI:", web_config.get("redirect_uris", ["None"])[0])
-        
+
         flow = Flow.from_client_config(
             client_config,
             scopes=['https://www.googleapis.com/auth/drive.readonly'],
@@ -88,7 +86,7 @@ def authenticate_google_drive():
         st.write("Error type:", type(e).__name__)
         import traceback
         st.write("Traceback:", traceback.format_exc())
-    
+
     return None
 
 # Callback for Google Drive authentication
@@ -99,9 +97,9 @@ def handle_google_auth():
         state=st.query_params.get("state", None)
     )
     flow.redirect_uri = 'https://bijlagetool.streamlit.app/'
-    
+
     flow.fetch_token(code=st.query_params.get("code", None))
-    
+
     st.session_state.credentials = {
         'token': flow.credentials.token,
         'refresh_token': flow.credentials.refresh_token,
@@ -161,9 +159,9 @@ if selected == "Home":
 
 elif selected == "Zoeken":
     st.title("Zoek Bijlagen")
-    
+
     search_query = st.text_input("Voer een zoekterm in (bijv. 'autoverzekering asr casco')")
-    
+
     if search_query and drive_service:
         st.info(f"Zoeken naar: {search_query}")
         results = drive_service.files().list(
@@ -171,7 +169,7 @@ elif selected == "Zoeken":
             spaces='drive',
             fields='files(id, name, mimeType)'
         ).execute()
-        
+
         files = results.get('files', [])
         if files:
             for file in files:
@@ -191,14 +189,14 @@ elif selected == "Zoeken":
 
 elif selected == "Overzicht":
     st.title("Documentenoverzicht")
-    
+
     if drive_service:
         results = drive_service.files().list(
             pageSize=10,
             fields="files(id, name, mimeType, modifiedTime)"
         ).execute()
         files = results.get('files', [])
-        
+
         if files:
             data = {
                 'Document': [file['name'] for file in files],
@@ -214,9 +212,9 @@ elif selected == "Overzicht":
 
 elif selected == "Instellingen":
     st.title("Instellingen")
-    
+
     st.write("Hier kunt u de app-instellingen beheren.")
-    
+
     col1, col2 = st.columns(2)
     with col1:
         dark_mode = st.toggle("Donkere modus", value=False)
@@ -224,7 +222,7 @@ elif selected == "Instellingen":
     with col2:
         language = st.selectbox("Taal", ["Nederlands", "Engels", "Duits"])
         max_results = st.number_input("Maximaal aantal zoekresultaten", min_value=5, max_value=50, value=10)
-    
+
     if st.button("Instellingen opslaan"):
         st.session_state.dark_mode = dark_mode
         st.session_state.notifications = notifications
@@ -234,4 +232,4 @@ elif selected == "Instellingen":
 
 # Footer
 st.markdown("---")
-st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf")
+st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf") 
