@@ -5,9 +5,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseDownload
-from google_auth_oauthlib.flow import InstalledAppFlow
 import io
-
 
 # Set page config
 st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
@@ -53,6 +51,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Google Drive authentication function
 def authenticate_google_drive():
     try:
         client_config = st.secrets["client_secrets"]
@@ -91,13 +90,13 @@ def authenticate_google_drive():
 # Callback for Google Drive authentication
 def handle_google_auth():
     flow = Flow.from_client_config(
-        st.secrets["client_secrets"]["web"],
+        st.secrets["client_secrets"],
         scopes=['https://www.googleapis.com/auth/drive.readonly'],
-        state=st.experimental_get_query_params().get("state", None)[0]
+        state=st.query_params.get("state", None)
     )
     flow.redirect_uri = 'https://bijlagetool.streamlit.app/'
     
-    flow.fetch_token(code=st.experimental_get_query_params().get("code", None)[0])
+    flow.fetch_token(code=st.query_params.get("code", None))
     
     st.session_state.credentials = {
         'token': flow.credentials.token,
@@ -107,6 +106,14 @@ def handle_google_auth():
         'client_secret': flow.credentials.client_secret,
         'scopes': flow.credentials.scopes
     }
+
+# Check for authentication callback
+if 'code' in st.query_params:
+    handle_google_auth()
+    st.experimental_rerun()
+
+# Authenticate with Google Drive
+drive_service = authenticate_google_drive()
 
 # Function to download file
 def download_file(file_id, file_name):
@@ -118,14 +125,6 @@ def download_file(file_id, file_name):
         status, done = downloader.next_chunk()
     fh.seek(0)
     return fh
-
-# Check for authentication callback
-if 'code' in st.experimental_get_query_params():
-    handle_google_auth()
-    st.experimental_rerun()
-
-# Authenticate with Google Drive
-drive_service = authenticate_google_drive()
 
 # Sidebar
 with st.sidebar:
