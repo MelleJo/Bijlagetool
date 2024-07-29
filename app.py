@@ -61,24 +61,17 @@ st.markdown("""
 # Google Drive authentication function
 def authenticate_google_drive():
     try:
-        client_config = st.secrets["client_secrets"]
+        client_config = st.secrets["client_secrets"]["web"]
         st.write("Client config keys:", list(client_config.keys()))
 
-        if 'web' not in client_config:
-            raise ValueError("Client secrets must contain a 'web' key")
-
-        web_config = client_config['web']
-        st.write("Web config keys:", list(web_config.keys()))
-        st.write("Redirect URI:", web_config.get("redirect_uris", ["None"])[0])
-
         flow = Flow.from_client_config(
-            client_config,
+            {"web": client_config},
             scopes=['https://www.googleapis.com/auth/drive.readonly'],
-            redirect_uri=web_config["redirect_uris"][0]
+            redirect_uri=client_config["redirect_uris"][0]
         )
 
         if 'credentials' not in st.session_state:
-            authorization_url, _ = flow.authorization_url(prompt='consent')
+            authorization_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
             st.write("Authorization URL:", authorization_url)
             st.markdown(f'[Authenticate with Google Drive]({authorization_url})')
             st.stop()
