@@ -106,7 +106,8 @@ def handle_google_auth():
         'client_secret': flow.credentials.client_secret,
         'scopes': flow.credentials.scopes
     }
-
+    st.experimental_rerun()
+    
 # Check for authentication callback
 if 'code' in st.query_params:
     handle_google_auth()
