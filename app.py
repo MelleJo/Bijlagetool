@@ -270,3 +270,7 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf")
+
+if __name__ == "__main__":
+    main()
+
