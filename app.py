@@ -82,7 +82,8 @@ def authenticate_google_drive():
 
         st.session_state['state'] = state
 
-        st.markdown(f"[Authorize]({auth_url})")
+        if st.button("Authorize Google Drive Access"):
+            st.markdown(f"[Authorize]({auth_url})")
 
         query_params = st.query_params
         if 'code' in query_params:
@@ -92,6 +93,7 @@ def authenticate_google_drive():
             st.session_state['credentials'] = creds
 
     return build('drive', 'v3', credentials=creds)
+
 
 
 
@@ -146,18 +148,19 @@ def handle_google_auth():
 
 
 
+
 def main():
     st.title("Bijlagetool")
 
     if st.button("Clear Session State"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.query_params()
+        st.set_query_params()
         st.success("Session state cleared. Please refresh the page.")
 
     # Ensure secrets are accessed properly
     try:
-        client_secrets = st.secrets["client_secrets"]
+        client_secrets = st.secrets["client_secrets"]["web"]
         st.write("Full client config:", client_secrets)
     except Exception as e:
         st.error(f"Error accessing client secrets: {e}")
@@ -278,5 +281,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
