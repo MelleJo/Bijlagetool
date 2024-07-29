@@ -6,6 +6,18 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseDownload
 import io
+import sys
+
+def show_error_details():
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    st.error(f"An error occurred: {exc_value}")
+    st.write("Error type:", exc_type.__name__)
+    import traceback
+    st.write("Traceback:", traceback.format_exc())
+
+
+st.write("Query parameters:", st.query_params)
+st.write("Session state keys:", list(st.session_state.keys()))
 
 # Set page config (must be the first Streamlit command)
 st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
@@ -89,29 +101,45 @@ def authenticate_google_drive():
 
 # Callback for Google Drive authentication
 def handle_google_auth():
-    client_config = st.secrets["client_secrets"]["web"]
-    flow = Flow.from_client_config(
-        {"web": client_config},
-        scopes=['https://www.googleapis.com/auth/drive.file'],
-        redirect_uri="https://bijlagetool.streamlit.app/"
-    )
-    
-    flow.fetch_token(code=st.query_params.get("code", None))
-    
-    st.session_state.credentials = {
-        'token': flow.credentials.token,
-        'refresh_token': flow.credentials.refresh_token,
-        'token_uri': flow.credentials.token_uri,
-        'client_id': flow.credentials.client_id,
-        'client_secret': flow.credentials.client_secret,
-        'scopes': flow.credentials.scopes
-    }
-    st.rerun()
+    try:
+        client_config = st.secrets["client_secrets"]["web"]
+        flow = Flow.from_client_config(
+            {"web": client_config},
+            scopes=['https://www.googleapis.com/auth/drive.file'],
+            redirect_uri="https://bijlagetool.streamlit.app/"
+        )
+        
+        code = st.query_params.get("code", None)
+        if code is None:
+            st.error("No authorization code found in the URL parameters.")
+            return
+
+        flow.fetch_token(code=code)
+        
+        st.session_state.credentials = {
+            'token': flow.credentials.token,
+            'refresh_token': flow.credentials.refresh_token,
+            'token_uri': flow.credentials.token_uri,
+            'client_id': flow.credentials.client_id,
+            'client_secret': flow.credentials.client_secret,
+            'scopes': flow.credentials.scopes
+        }
+        st.success("Successfully authenticated!")
+        st.rerun()
+    except Exception as e:
+        st.error(f"An error occurred during authentication: {str(e)}")
+        st.write("Error type:", type(e).__name__)
+        import traceback
+        st.write("Traceback:", traceback.format_exc())
 
 # Check for authentication callback
 if 'code' in st.query_params:
     handle_google_auth()
-    st.rerun()
+elif 'credentials' not in st.session_state:
+    authenticate_google_drive()
+else:
+    # Proceed with the rest of your app logic here
+    st.write("Authenticated successfully!")
 
 # Authenticate with Google Drive
 drive_service = authenticate_google_drive()
