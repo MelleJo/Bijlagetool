@@ -76,9 +76,9 @@ def authenticate_google_drive():
 
         st.markdown(f"[Authorize]({auth_url})")
 
-        query_params = st.experimental_get_query_params()
+        query_params = st.query_params
         if 'code' in query_params:
-            code = query_params['code']
+            code = query_params['code'][0]
             flow.fetch_token(code=code)
             creds = flow.credentials
             st.session_state['credentials'] = creds
@@ -95,7 +95,7 @@ def handle_google_auth():
             redirect_uri="https://bijlagetool.streamlit.app/"
         )
         
-        query_params = st.experimental_get_query_params()
+        query_params = st.query_params
         code = query_params.get("code", [None])[0]
         state = query_params.get("state", [None])[0]
         stored_state = query_params.get("auth_state", [None])[0]
@@ -121,13 +121,13 @@ def handle_google_auth():
         }
         st.success("Successfully authenticated!")
         st.experimental_set_query_params()  # Clear query params
-        st.experimental_rerun()
+        st.rerun()
     except Exception as e:
         st.error(f"An error occurred during authentication: {str(e)}")
         st.write("Error type:", type(e).__name__)
         import traceback
         st.write("Traceback:", traceback.format_exc())
-        st.write("Query parameters:", st.experimental_get_query_params())
+        st.write("Query parameters:", st.query_params)
         st.write("Session state keys:", list(st.session_state.keys()))
 
 def download_file(drive_service, file_id, file_name):
@@ -156,7 +156,7 @@ def main():
     except Exception as e:
         st.error(f"Error accessing client secrets: {e}")
 
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params
 
     if 'state' in st.session_state and st.session_state['state'] != query_params.get('state', [None])[0]:
         st.error("Invalid state parameter. Please try authenticating again.")
@@ -166,6 +166,8 @@ def main():
         authenticate_google_drive()
     elif 'credentials' not in st.session_state:
         drive_service = authenticate_google_drive()
+        if not drive_service:
+            return  # Exit the function if there's an issue with authentication
     else:
         drive_service = st.session_state['credentials']
 
