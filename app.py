@@ -53,20 +53,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Google Drive authentication function
 def authenticate_google_drive():
     try:
-        client_config = st.secrets["client_secrets"]
+        client_config = st.secrets["client_secrets"]["web"]
         
-        # Ensure the client config is in the correct format
-        if "web" in client_config:
-            client_config = {"installed": client_config["web"]}
+        # Log client configuration (be careful not to log sensitive information)
+        st.write("Client config keys:", list(client_config.keys()))
+        st.write("Redirect URI:", client_config.get("redirect_uris", ["None"])[0])
         
-        flow = InstalledAppFlow.from_client_config(
+        flow = Flow.from_client_config(
             client_config,
-            scopes=['https://www.googleapis.com/auth/drive.readonly']
+            scopes=['https://www.googleapis.com/auth/drive.readonly'],
+            redirect_uri=client_config["redirect_uris"][0]
         )
-        flow.redirect_uri = 'https://bijlagetool.streamlit.app/'
 
         if 'credentials' not in st.session_state:
             authorization_url, _ = flow.authorization_url(prompt='consent')
@@ -76,12 +75,11 @@ def authenticate_google_drive():
             credentials = Credentials(**st.session_state.credentials)
             drive_service = build('drive', 'v3', credentials=credentials)
             return drive_service
-    except KeyError as e:
-        st.error(f"Error in client secrets configuration: {str(e)}")
-        st.write("Please check your client_secrets configuration in Streamlit secrets.")
     except Exception as e:
-        st.error(f"An unexpected error occurred: {str(e)}")
-        st.write("Please check your configuration and try again.")
+        st.error(f"An error occurred: {str(e)}")
+        st.write("Error type:", type(e).__name__)
+        import traceback
+        st.write("Traceback:", traceback.format_exc())
     
     return None
 
