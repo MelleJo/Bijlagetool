@@ -8,6 +8,8 @@ from googleapiclient.http import MediaIoBaseDownload
 import io
 import sys
 
+st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
+
 def show_error_details():
     exc_type, exc_value, exc_traceback = sys.exc_info()
     st.error(f"An error occurred: {exc_value}")
@@ -19,8 +21,7 @@ def show_error_details():
 st.write("Query parameters:", st.query_params)
 st.write("Session state keys:", list(st.session_state.keys()))
 
-# Set page config (must be the first Streamlit command)
-st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
+
 
 # Ensure secrets are accessed properly
 try:
