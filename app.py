@@ -65,13 +65,13 @@ def authenticate_google_drive():
         )
 
         if 'credentials' not in st.session_state:
-            if 'auth_state' not in st.session_state:
-                st.session_state.auth_state = secrets.token_urlsafe(16)
+            state = secrets.token_urlsafe(16)
+            st.experimental_set_query_params(auth_state=state)
 
             authorization_url, _ = flow.authorization_url(
                 prompt='consent',
                 access_type='offline',
-                state=st.session_state.auth_state
+                state=state
             )
             st.sidebar.markdown(f'[Authenticate with Google Drive]({authorization_url})')
             return None
@@ -96,16 +96,18 @@ def handle_google_auth():
             redirect_uri="https://bijlagetool.streamlit.app/"
         )
         
-        code = st.query_params.get("code", None)
-        state = st.query_params.get("state", None)
+        query_params = st.experimental_get_query_params()
+        code = query_params.get("code", [None])[0]
+        state = query_params.get("state", [None])[0]
+        stored_state = query_params.get("auth_state", [None])[0]
         
         if code is None:
             st.error("No authorization code found in the URL parameters.")
             return
 
-        if state is None or state != st.session_state.get("auth_state"):
+        if state is None or state != stored_state:
             st.error("Invalid state parameter. Please try authenticating again.")
-            st.session_state.pop('auth_state', None)  # Clear the stored state
+            st.experimental_set_query_params()  # Clear query params
             return
 
         token = flow.fetch_token(code=code)
@@ -119,14 +121,14 @@ def handle_google_auth():
             'scopes': ['https://www.googleapis.com/auth/drive.file']
         }
         st.success("Successfully authenticated!")
-        st.session_state.pop('auth_state', None)  # Clear the stored state after successful authentication
+        st.experimental_set_query_params()  # Clear query params
         st.experimental_rerun()
     except Exception as e:
         st.error(f"An error occurred during authentication: {str(e)}")
         st.write("Error type:", type(e).__name__)
         import traceback
         st.write("Traceback:", traceback.format_exc())
-        st.write("Query parameters:", st.query_params)
+        st.write("Query parameters:", st.experimental_get_query_params())
         st.write("Session state keys:", list(st.session_state.keys()))
 
 def download_file(drive_service, file_id, file_name):
