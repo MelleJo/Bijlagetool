@@ -7,28 +7,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseDownload
 import io
 import sys
+import secrets
 
+# Set page config (must be the first Streamlit command)
 st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
-
-def show_error_details():
-    exc_type, exc_value, exc_traceback = sys.exc_info()
-    st.error(f"An error occurred: {exc_value}")
-    st.write("Error type:", exc_type.__name__)
-    import traceback
-    st.write("Traceback:", traceback.format_exc())
-
-
-st.write("Query parameters:", st.query_params)
-st.write("Session state keys:", list(st.session_state.keys()))
-
-
-
-# Ensure secrets are accessed properly
-try:
-    client_secrets = st.secrets["client_secrets"]
-    st.write("Full client config:", client_secrets)
-except Exception as e:
-    st.error(f"Error accessing client secrets: {e}")
 
 # Custom CSS to inject
 st.markdown("""
@@ -71,7 +53,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Google Drive authentication function
 def authenticate_google_drive():
     try:
         client_config = st.secrets["client_secrets"]["web"]
@@ -84,8 +65,6 @@ def authenticate_google_drive():
         )
 
         if 'credentials' not in st.session_state:
-            # Generate and store a random state
-            import secrets
             state = secrets.token_urlsafe(16)
             st.session_state.auth_state = state
 
@@ -94,9 +73,8 @@ def authenticate_google_drive():
                 access_type='offline',
                 state=state
             )
-            st.write("Authorization URL:", authorization_url)
-            st.markdown(f'[Authenticate with Google Drive]({authorization_url})')
-            st.stop()
+            st.sidebar.markdown(f'[Authenticate with Google Drive]({authorization_url})')
+            return None
         else:
             credentials = Credentials(**st.session_state.credentials)
             drive_service = build('drive', 'v3', credentials=credentials)
@@ -109,7 +87,6 @@ def authenticate_google_drive():
 
     return None
 
-# Callback for Google Drive authentication
 def handle_google_auth():
     try:
         client_config = st.secrets["client_secrets"]["web"]
@@ -124,7 +101,6 @@ def handle_google_auth():
             st.error("No authorization code found in the URL parameters.")
             return
 
-        # Add state verification
         state = st.query_params.get("state", None)
         if state is None or state != st.session_state.get("auth_state"):
             st.error("Invalid state parameter. Possible CSRF attack.")
@@ -150,11 +126,7 @@ def handle_google_auth():
         st.write("Query parameters:", st.query_params)
         st.write("Session state keys:", list(st.session_state.keys()))
 
-# Authenticate with Google Drive
-drive_service = authenticate_google_drive()
-
-# Function to download file
-def download_file(file_id, file_name):
+def download_file(drive_service, file_id, file_name):
     request = drive_service.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
@@ -164,108 +136,129 @@ def download_file(file_id, file_name):
     fh.seek(0)
     return fh
 
-# Sidebar
-with st.sidebar:
-    selected = option_menu(
-        menu_title="Navigatie",
-        options=["Home", "Zoeken", "Overzicht", "Instellingen"],
-        icons=["house", "search", "list-ul", "gear"],
-        menu_icon="cast",
-        default_index=0,
-        styles={
-            "container": {"padding": "0!important", "background-color": "#f8f9fa"},
-            "icon": {"color": "orange", "font-size": "25px"}, 
-            "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background-color": "#ff4b4b"},
-        }
-    )
+def main():
+    st.title("Bijlagetool")
 
-# Main content
-if selected == "Home":
-    st.title("Welkom bij de Bijlagetool")
-    st.write("Selecteer een optie in het navigatiemenu om te beginnen.")
+    # Ensure secrets are accessed properly
+    try:
+        client_secrets = st.secrets["client_secrets"]
+        st.write("Full client config:", client_secrets)
+    except Exception as e:
+        st.error(f"Error accessing client secrets: {e}")
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.info("👀 Bekijk recente documenten")
-    with col2:
-        st.success("🔍 Zoek specifieke bijlagen")
-    with col3:
-        st.warning("⚙️ Beheer instellingen")
-
-elif selected == "Zoeken":
-    st.title("Zoek Bijlagen")
-
-    search_query = st.text_input("Voer een zoekterm in (bijv. 'autoverzekering asr casco')")
-
-    if search_query and drive_service:
-        st.info(f"Zoeken naar: {search_query}")
-        results = drive_service.files().list(
-            q=f"name contains '{search_query}'",
-            spaces='drive',
-            fields='files(id, name, mimeType)'
-        ).execute()
-
-        files = results.get('files', [])
-        if files:
-            for file in files:
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"📄 {file['name']}")
-                with col2:
-                    file_content = download_file(file['id'], file['name'])
-                    st.download_button(
-                        label="Download",
-                        data=file_content,
-                        file_name=file['name'],
-                        mime=file['mimeType']
-                    )
-        else:
-            st.write("Geen documenten gevonden.")
-
-elif selected == "Overzicht":
-    st.title("Documentenoverzicht")
+    # Authentication check
+    if 'error' in st.query_params:
+        st.error(f"Authentication error: {st.query_params['error']}")
+    elif 'code' in st.query_params:
+        handle_google_auth()
+    
+    drive_service = authenticate_google_drive()
 
     if drive_service:
-        results = drive_service.files().list(
-            pageSize=10,
-            fields="files(id, name, mimeType, modifiedTime)"
-        ).execute()
-        files = results.get('files', [])
+        st.success("Successfully authenticated!")
+        
+        # Sidebar
+        with st.sidebar:
+            selected = option_menu(
+                menu_title="Navigatie",
+                options=["Home", "Zoeken", "Overzicht", "Instellingen"],
+                icons=["house", "search", "list-ul", "gear"],
+                menu_icon="cast",
+                default_index=0,
+                styles={
+                    "container": {"padding": "0!important", "background-color": "#f8f9fa"},
+                    "icon": {"color": "orange", "font-size": "25px"}, 
+                    "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
+                    "nav-link-selected": {"background-color": "#ff4b4b"},
+                }
+            )
 
-        if files:
-            data = {
-                'Document': [file['name'] for file in files],
-                'Type': [file['mimeType'] for file in files],
-                'Laatst gewijzigd': [file['modifiedTime'] for file in files]
-            }
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.write("Geen documenten gevonden.")
+        # Main content
+        if selected == "Home":
+            st.header("Welkom bij de Bijlagetool")
+            st.write("Selecteer een optie in het navigatiemenu om te beginnen.")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.info("👀 Bekijk recente documenten")
+            with col2:
+                st.success("🔍 Zoek specifieke bijlagen")
+            with col3:
+                st.warning("⚙️ Beheer instellingen")
+
+        elif selected == "Zoeken":
+            st.header("Zoek Bijlagen")
+            search_query = st.text_input("Voer een zoekterm in (bijv. 'autoverzekering asr casco')")
+
+            if search_query:
+                st.info(f"Zoeken naar: {search_query}")
+                results = drive_service.files().list(
+                    q=f"name contains '{search_query}'",
+                    spaces='drive',
+                    fields='files(id, name, mimeType)'
+                ).execute()
+
+                files = results.get('files', [])
+                if files:
+                    for file in files:
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            st.write(f"📄 {file['name']}")
+                        with col2:
+                            file_content = download_file(drive_service, file['id'], file['name'])
+                            st.download_button(
+                                label="Download",
+                                data=file_content,
+                                file_name=file['name'],
+                                mime=file['mimeType']
+                            )
+                else:
+                    st.write("Geen documenten gevonden.")
+
+        elif selected == "Overzicht":
+            st.header("Documentenoverzicht")
+            results = drive_service.files().list(
+                pageSize=10,
+                fields="files(id, name, mimeType, modifiedTime)"
+            ).execute()
+            files = results.get('files', [])
+
+            if files:
+                data = {
+                    'Document': [file['name'] for file in files],
+                    'Type': [file['mimeType'] for file in files],
+                    'Laatst gewijzigd': [file['modifiedTime'] for file in files]
+                }
+                df = pd.DataFrame(data)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.write("Geen documenten gevonden.")
+
+        elif selected == "Instellingen":
+            st.header("Instellingen")
+            st.write("Hier kunt u de app-instellingen beheren.")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                dark_mode = st.checkbox("Donkere modus", value=False)
+                notifications = st.checkbox("Notificaties", value=True)
+            with col2:
+                language = st.selectbox("Taal", ["Nederlands", "Engels", "Duits"])
+                max_results = st.number_input("Maximaal aantal zoekresultaten", min_value=5, max_value=50, value=10)
+
+            if st.button("Instellingen opslaan"):
+                st.session_state.dark_mode = dark_mode
+                st.session_state.notifications = notifications
+                st.session_state.language = language
+                st.session_state.max_results = max_results
+                st.success("Instellingen opgeslagen!")
+
     else:
-        st.write("Authenticatie vereist om documenten te bekijken.")
+        st.warning("Please authenticate to use the Bijlagetool.")
 
-elif selected == "Instellingen":
-    st.title("Instellingen")
+    # Footer
+    st.markdown("---")
+    st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf")
 
-    st.write("Hier kunt u de app-instellingen beheren.")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        dark_mode = st.checkbox("Donkere modus", value=False)
-        notifications = st.checkbox("Notificaties", value=True)
-    with col2:
-        language = st.selectbox("Taal", ["Nederlands", "Engels", "Duits"])
-        max_results = st.number_input("Maximaal aantal zoekresultaten", min_value=5, max_value=50, value=10)
-
-    if st.button("Instellingen opslaan"):
-        st.session_state.dark_mode = dark_mode
-        st.session_state.notifications = notifications
-        st.session_state.language = language
-        st.session_state.max_results = max_results
-        st.success("Instellingen opgeslagen!")
-
-# Footer
-st.markdown("---")
-st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf")
+if __name__ == "__main__":
+    main()
