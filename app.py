@@ -66,8 +66,8 @@ def authenticate_google_drive():
 
         flow = Flow.from_client_config(
             {"web": client_config},
-            scopes=['https://www.googleapis.com/auth/drive.readonly'],
-            redirect_uri=client_config["redirect_uris"][0]
+            scopes=['https://www.googleapis.com/auth/drive.file'],
+            redirect_uri="https://bijlagetool.streamlit.app/"
         )
 
         if 'credentials' not in st.session_state:
@@ -89,15 +89,15 @@ def authenticate_google_drive():
 
 # Callback for Google Drive authentication
 def handle_google_auth():
+    client_config = st.secrets["client_secrets"]["web"]
     flow = Flow.from_client_config(
-        st.secrets["client_secrets"],
-        scopes=['https://www.googleapis.com/auth/drive.readonly'],
-        state=st.query_params.get("state", None)
+        {"web": client_config},
+        scopes=['https://www.googleapis.com/auth/drive.file'],
+        redirect_uri="https://bijlagetool.streamlit.app/"
     )
-    flow.redirect_uri = 'https://bijlagetool.streamlit.app/'
-
+    
     flow.fetch_token(code=st.query_params.get("code", None))
-
+    
     st.session_state.credentials = {
         'token': flow.credentials.token,
         'refresh_token': flow.credentials.refresh_token,
