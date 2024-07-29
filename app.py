@@ -6,6 +6,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseDownload
 import io
+import os
 import sys
 import secrets
 
@@ -57,8 +58,14 @@ def authenticate_google_drive():
     if 'credentials' in st.session_state:
         creds = st.session_state['credentials']
     else:
+        # Ensure the client secrets file is correctly referenced
+        client_secrets_path = os.path.join(os.getcwd(), 'client_secrets.json')
+        if not os.path.exists(client_secrets_path):
+            st.error("Client secrets file not found. Please upload or check the file path.")
+            return None
+
         flow = Flow.from_client_secrets_file(
-            'client_secrets.json',
+            client_secrets_path,
             scopes=['https://www.googleapis.com/auth/drive.metadata.readonly'],
             redirect_uri='https://bijlagetool.streamlit.app/'
         )
@@ -69,8 +76,8 @@ def authenticate_google_drive():
 
         st.markdown(f"[Authorize]({auth_url})")
 
-        if 'code' in st.experimental_get_query_params():
-            code = st.experimental_get_query_params()['code']
+        if 'code' in st.query_params:
+            code = st.query_params['code']
             flow.fetch_token(code=code)
             creds = flow.credentials
             st.session_state['credentials'] = creds
@@ -87,7 +94,7 @@ def handle_google_auth():
             redirect_uri="https://bijlagetool.streamlit.app/"
         )
         
-        query_params = st.experimental_get_query_params()
+        query_params = st.query_params
         code = query_params.get("code", [None])[0]
         state = query_params.get("state", [None])[0]
         stored_state = query_params.get("auth_state", [None])[0]
@@ -119,7 +126,7 @@ def handle_google_auth():
         st.write("Error type:", type(e).__name__)
         import traceback
         st.write("Traceback:", traceback.format_exc())
-        st.write("Query parameters:", st.experimental_get_query_params())
+        st.write("Query parameters:", st.query_params)
         st.write("Session state keys:", list(st.session_state.keys()))
 
 def download_file(drive_service, file_id, file_name):
@@ -148,7 +155,7 @@ def main():
     except Exception as e:
         st.error(f"Error accessing client secrets: {e}")
 
-    query_params = st.experimental_get_query_params()
+    query_params = st.query_params
 
     if 'state' in st.session_state and st.session_state['state'] != query_params.get('state', [None])[0]:
         st.error("Invalid state parameter. Please try authenticating again.")
@@ -262,4 +269,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
