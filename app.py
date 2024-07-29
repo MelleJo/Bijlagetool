@@ -84,7 +84,16 @@ def authenticate_google_drive():
         )
 
         if 'credentials' not in st.session_state:
-            authorization_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
+            # Generate and store a random state
+            import secrets
+            state = secrets.token_urlsafe(16)
+            st.session_state.auth_state = state
+
+            authorization_url, _ = flow.authorization_url(
+                prompt='consent',
+                access_type='offline',
+                state=state
+            )
             st.write("Authorization URL:", authorization_url)
             st.markdown(f'[Authenticate with Google Drive]({authorization_url})')
             st.stop()
@@ -115,32 +124,31 @@ def handle_google_auth():
             st.error("No authorization code found in the URL parameters.")
             return
 
-        flow.fetch_token(code=code)
+        # Add state verification
+        state = st.query_params.get("state", None)
+        if state is None or state != st.session_state.get("auth_state"):
+            st.error("Invalid state parameter. Possible CSRF attack.")
+            return
+
+        token = flow.fetch_token(code=code)
         
         st.session_state.credentials = {
-            'token': flow.credentials.token,
-            'refresh_token': flow.credentials.refresh_token,
-            'token_uri': flow.credentials.token_uri,
-            'client_id': flow.credentials.client_id,
-            'client_secret': flow.credentials.client_secret,
-            'scopes': flow.credentials.scopes
+            'token': token['access_token'],
+            'refresh_token': token.get('refresh_token'),
+            'token_uri': client_config['token_uri'],
+            'client_id': client_config['client_id'],
+            'client_secret': client_config['client_secret'],
+            'scopes': ['https://www.googleapis.com/auth/drive.file']
         }
         st.success("Successfully authenticated!")
-        st.rerun()
+        st.experimental_rerun()
     except Exception as e:
         st.error(f"An error occurred during authentication: {str(e)}")
         st.write("Error type:", type(e).__name__)
         import traceback
         st.write("Traceback:", traceback.format_exc())
-
-# Check for authentication callback
-if 'code' in st.query_params:
-    handle_google_auth()
-elif 'credentials' not in st.session_state:
-    authenticate_google_drive()
-else:
-    # Proceed with the rest of your app logic here
-    st.write("Authenticated successfully!")
+        st.write("Query parameters:", st.query_params)
+        st.write("Session state keys:", list(st.session_state.keys()))
 
 # Authenticate with Google Drive
 drive_service = authenticate_google_drive()
