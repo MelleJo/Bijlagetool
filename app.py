@@ -106,12 +106,12 @@ def handle_google_auth():
         'client_secret': flow.credentials.client_secret,
         'scopes': flow.credentials.scopes
     }
-    st.experimental_rerun()
-    
+    st.rerun()
+
 # Check for authentication callback
 if 'code' in st.query_params:
     handle_google_auth()
-    st.experimental_rerun()
+    st.rerun()
 
 # Authenticate with Google Drive
 drive_service = authenticate_google_drive()
