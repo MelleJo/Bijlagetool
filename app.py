@@ -222,8 +222,8 @@ elif selected == "Instellingen":
 
     col1, col2 = st.columns(2)
     with col1:
-        dark_mode = st.toggle("Donkere modus", value=False)
-        notifications = st.toggle("Notificaties", value=True)
+        dark_mode = st.checkbox("Donkere modus", value=False)
+        notifications = st.checkbox("Notificaties", value=True)
     with col2:
         language = st.selectbox("Taal", ["Nederlands", "Engels", "Duits"])
         max_results = st.number_input("Maximaal aantal zoekresultaten", min_value=5, max_value=50, value=10)
