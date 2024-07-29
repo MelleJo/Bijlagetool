@@ -7,8 +7,12 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseDownload
 import io
 
+st.write("Full client config:", st.secrets["client_secrets"])
+
 # Set page config
 st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
+
+
 
 # Custom CSS to inject
 st.markdown("""
@@ -55,7 +59,6 @@ st.markdown("""
 def authenticate_google_drive():
     try:
         client_config = st.secrets["client_secrets"]
-        
         st.write("Client config keys:", list(client_config.keys()))
         
         if 'web' not in client_config:
@@ -73,6 +76,7 @@ def authenticate_google_drive():
 
         if 'credentials' not in st.session_state:
             authorization_url, _ = flow.authorization_url(prompt='consent')
+            st.write("Authorization URL:", authorization_url)
             st.markdown(f'[Authenticate with Google Drive]({authorization_url})')
             st.stop()
         else:
