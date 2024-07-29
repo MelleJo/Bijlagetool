@@ -54,18 +54,17 @@ st.markdown("""
 # Google Drive authentication function
 def authenticate_google_drive():
     try:
-        client_config = st.secrets["client_secrets"]["web"]
+        client_config = st.secrets["client_secrets"]
         
-        # Manually create the Flow object
-        flow = Flow(
-            oauth2session=None,
-            client_id=client_config['client_id'],
-            client_secret=client_config['client_secret'],
-            scopes=['https://www.googleapis.com/auth/drive.readonly'],
-            redirect_uri='https://bijlagetool.streamlit.app/',
-            authorization_url='https://accounts.google.com/o/oauth2/auth',
-            token_url='https://oauth2.googleapis.com/token',
+        # Ensure the client config is in the correct format
+        if "web" in client_config:
+            client_config = {"installed": client_config["web"]}
+        
+        flow = InstalledAppFlow.from_client_config(
+            client_config,
+            scopes=['https://www.googleapis.com/auth/drive.readonly']
         )
+        flow.redirect_uri = 'https://bijlagetool.streamlit.app/'
 
         if 'credentials' not in st.session_state:
             authorization_url, _ = flow.authorization_url(prompt='consent')
