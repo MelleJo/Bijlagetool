@@ -79,4 +79,4 @@ if selected == "Home":
 
 # Footer
 st.markdown("---")
-st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf")
+st.markdown("© 2023 Bijlagetool | Veldhuis Advies")
