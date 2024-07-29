@@ -65,13 +65,13 @@ def authenticate_google_drive():
         )
 
         if 'credentials' not in st.session_state:
-            state = secrets.token_urlsafe(16)
-            st.session_state.auth_state = state
+            if 'auth_state' not in st.session_state:
+                st.session_state.auth_state = secrets.token_urlsafe(16)
 
             authorization_url, _ = flow.authorization_url(
                 prompt='consent',
                 access_type='offline',
-                state=state
+                state=st.session_state.auth_state
             )
             st.sidebar.markdown(f'[Authenticate with Google Drive]({authorization_url})')
             return None
@@ -97,13 +97,15 @@ def handle_google_auth():
         )
         
         code = st.query_params.get("code", None)
+        state = st.query_params.get("state", None)
+        
         if code is None:
             st.error("No authorization code found in the URL parameters.")
             return
 
-        state = st.query_params.get("state", None)
         if state is None or state != st.session_state.get("auth_state"):
-            st.error("Invalid state parameter. Possible CSRF attack.")
+            st.error("Invalid state parameter. Please try authenticating again.")
+            st.session_state.pop('auth_state', None)  # Clear the stored state
             return
 
         token = flow.fetch_token(code=code)
@@ -117,6 +119,7 @@ def handle_google_auth():
             'scopes': ['https://www.googleapis.com/auth/drive.file']
         }
         st.success("Successfully authenticated!")
+        st.session_state.pop('auth_state', None)  # Clear the stored state after successful authentication
         st.experimental_rerun()
     except Exception as e:
         st.error(f"An error occurred during authentication: {str(e)}")
@@ -139,6 +142,12 @@ def download_file(drive_service, file_id, file_name):
 def main():
     st.title("Bijlagetool")
 
+
+    if st.button("Clear Session State"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.success("Session state cleared. Please refresh the page.")
+    
     # Ensure secrets are accessed properly
     try:
         client_secrets = st.secrets["client_secrets"]
