@@ -58,16 +58,24 @@ def authenticate_google_drive():
     if 'credentials' in st.session_state:
         creds = st.session_state['credentials']
     else:
-        # Ensure the client secrets file is correctly referenced
-        client_secrets_path = os.path.join(os.getcwd(), 'client_secrets.json')
-        if not os.path.exists(client_secrets_path):
-            st.error("Client secrets file not found. Please upload or check the file path.")
-            return None
+        # Use secrets from st.secrets
+        client_secrets = {
+            "web": {
+                "client_id": st.secrets["client_secrets"]["client_id"],
+                "project_id": st.secrets["client_secrets"]["project_id"],
+                "auth_uri": st.secrets["client_secrets"]["auth_uri"],
+                "token_uri": st.secrets["client_secrets"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["client_secrets"]["auth_provider_x509_cert_url"],
+                "client_secret": st.secrets["client_secrets"]["client_secret"],
+                "redirect_uris": st.secrets["client_secrets"]["redirect_uris"],
+                "javascript_origins": st.secrets["client_secrets"]["javascript_origins"]
+            }
+        }
 
-        flow = Flow.from_client_secrets_file(
-            client_secrets_path,
+        flow = Flow.from_client_config(
+            client_secrets,
             scopes=['https://www.googleapis.com/auth/drive.metadata.readonly'],
-            redirect_uri='https://bijlagetool.streamlit.app/'
+            redirect_uri=st.secrets["client_secrets"]["redirect_uris"][0]
         )
 
         auth_url, state = flow.authorization_url(prompt='consent')
@@ -87,13 +95,23 @@ def authenticate_google_drive():
 
 
 
+
 def handle_google_auth():
     try:
-        client_config = st.secrets["client_secrets"]["web"]
+        client_config = {
+            "client_id": st.secrets["client_secrets"]["client_id"],
+            "project_id": st.secrets["client_secrets"]["project_id"],
+            "auth_uri": st.secrets["client_secrets"]["auth_uri"],
+            "token_uri": st.secrets["client_secrets"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["client_secrets"]["auth_provider_x509_cert_url"],
+            "client_secret": st.secrets["client_secrets"]["client_secret"],
+            "redirect_uris": st.secrets["client_secrets"]["redirect_uris"],
+            "javascript_origins": st.secrets["client_secrets"]["javascript_origins"]
+        }
         flow = Flow.from_client_config(
             {"web": client_config},
             scopes=['https://www.googleapis.com/auth/drive.file'],
-            redirect_uri="https://bijlagetool.streamlit.app/"
+            redirect_uri=st.secrets["client_secrets"]["redirect_uris"][0]
         )
         
         query_params = st.query_params
@@ -125,16 +143,6 @@ def handle_google_auth():
         st.write("Query parameters:", st.query_params)
         st.write("Session state keys:", list(st.session_state.keys()))
 
-
-def download_file(drive_service, file_id, file_name):
-    request = drive_service.files().get_media(fileId=file_id)
-    fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
-    fh.seek(0)
-    return fh
 
 def main():
     st.title("Bijlagetool")
@@ -268,4 +276,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
