@@ -144,12 +144,12 @@ def download_file(drive_service, file_id, file_name):
 def main():
     st.title("Bijlagetool")
 
-
     if st.button("Clear Session State"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
+        st.experimental_set_query_params()
         st.success("Session state cleared. Please refresh the page.")
-    
+
     # Ensure secrets are accessed properly
     try:
         client_secrets = st.secrets["client_secrets"]
@@ -157,13 +157,13 @@ def main():
     except Exception as e:
         st.error(f"Error accessing client secrets: {e}")
 
-    # Authentication check
-    if 'error' in st.query_params:
-        st.error(f"Authentication error: {st.query_params['error']}")
-    elif 'code' in st.query_params:
+    query_params = st.experimental_get_query_params()
+    if "code" in query_params and "state" in query_params:
         handle_google_auth()
-    
-    drive_service = authenticate_google_drive()
+    elif 'credentials' not in st.session_state:
+        drive_service = authenticate_google_drive()
+    else:
+        drive_service = authenticate_google_drive()
 
     if drive_service:
         st.success("Successfully authenticated!")
@@ -270,6 +270,3 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf")
-
-if __name__ == "__main__":
-    main()
