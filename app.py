@@ -55,14 +55,20 @@ st.markdown("""
 
 def authenticate_google_drive():
     try:
-        client_config = st.secrets["client_secrets"]["web"]
+        client_config = st.secrets["client_secrets"]
         
         # Log client configuration (be careful not to log sensitive information)
         st.write("Client config keys:", list(client_config.keys()))
+        
+        # Check if 'web' key exists in client_config
+        if 'web' in client_config:
+            client_config = client_config['web']
+        
+        st.write("Adjusted client config keys:", list(client_config.keys()))
         st.write("Redirect URI:", client_config.get("redirect_uris", ["None"])[0])
         
         flow = Flow.from_client_config(
-            client_config,
+            {"web": client_config},  # Wrap the config in a 'web' key
             scopes=['https://www.googleapis.com/auth/drive.readonly'],
             redirect_uri=client_config["redirect_uris"][0]
         )
