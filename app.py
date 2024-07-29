@@ -54,38 +54,29 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def authenticate_google_drive():
-    try:
-        client_config = st.secrets["client_secrets"]["web"]
-        st.write("Client config keys:", list(client_config.keys()))
-
-        flow = Flow.from_client_config(
-            {"web": client_config},
-            scopes=['https://www.googleapis.com/auth/drive.file'],
-            redirect_uri="https://bijlagetool.streamlit.app/"
+    if 'credentials' in st.session_state:
+        creds = st.session_state['credentials']
+    else:
+        flow = Flow.from_client_secrets_file(
+            'client_secrets.json',
+            scopes=['https://www.googleapis.com/auth/drive.metadata.readonly'],
+            redirect_uri='https://bijlagetool.streamlit.app/'
         )
 
-        if 'credentials' not in st.session_state:
-            state = secrets.token_urlsafe(16)
-            st.experimental_set_query_params(auth_state=state)
+        auth_url, state = flow.authorization_url(prompt='consent')
 
-            authorization_url, _ = flow.authorization_url(
-                prompt='consent',
-                access_type='offline',
-                state=state
-            )
-            st.sidebar.markdown(f'[Authenticate with Google Drive]({authorization_url})')
-            return None
-        else:
-            credentials = Credentials(**st.session_state.credentials)
-            drive_service = build('drive', 'v3', credentials=credentials)
-            return drive_service
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        st.write("Error type:", type(e).__name__)
-        import traceback
-        st.write("Traceback:", traceback.format_exc())
+        st.session_state['state'] = state
 
-    return None
+        st.markdown(f"[Authorize]({auth_url})")
+
+        if 'code' in st.experimental_get_query_params():
+            code = st.experimental_get_query_params()['code']
+            flow.fetch_token(code=code)
+            creds = flow.credentials
+            st.session_state['credentials'] = creds
+
+    return build('drive', 'v3', credentials=creds)
+
 
 def handle_google_auth():
     try:
@@ -158,16 +149,21 @@ def main():
         st.error(f"Error accessing client secrets: {e}")
 
     query_params = st.experimental_get_query_params()
+
+    if 'state' in st.session_state and st.session_state['state'] != query_params.get('state', [None])[0]:
+        st.error("Invalid state parameter. Please try authenticating again.")
+        return
+
     if "code" in query_params and "state" in query_params:
-        handle_google_auth()
+        authenticate_google_drive()
     elif 'credentials' not in st.session_state:
         drive_service = authenticate_google_drive()
     else:
-        drive_service = authenticate_google_drive()
+        drive_service = st.session_state['credentials']
 
     if drive_service:
         st.success("Successfully authenticated!")
-        
+
         # Sidebar
         with st.sidebar:
             selected = option_menu(
@@ -178,10 +174,15 @@ def main():
                 default_index=0,
                 styles={
                     "container": {"padding": "0!important", "background-color": "#f8f9fa"},
-                    "icon": {"color": "orange", "font-size": "25px"}, 
-                    "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
+                    "icon": {"color": "orange", "font-size": "25px"},
+                    "nav-link": {
+                        "font-size": "16px",
+                        "text-align": "left",
+                        "margin": "0px",
+                        "--hover-color": "#eee",
+                    },
                     "nav-link-selected": {"background-color": "#ff4b4b"},
-                }
+                },
             )
 
         # Main content
@@ -193,36 +194,24 @@ def main():
             with col1:
                 st.info("👀 Bekijk recente documenten")
             with col2:
-                st.success("🔍 Zoek specifieke bijlagen")
+                st.info("🔍 Zoek naar documenten")
             with col3:
-                st.warning("⚙️ Beheer instellingen")
+                st.info("⚙️ Beheer instellingen")
 
         elif selected == "Zoeken":
-            st.header("Zoek Bijlagen")
-            search_query = st.text_input("Voer een zoekterm in (bijv. 'autoverzekering asr casco')")
-
-            if search_query:
-                st.info(f"Zoeken naar: {search_query}")
+            st.header("Zoeken naar Documenten")
+            query = st.text_input("Voer een zoekterm in")
+            if st.button("Zoek"):
                 results = drive_service.files().list(
-                    q=f"name contains '{search_query}'",
-                    spaces='drive',
-                    fields='files(id, name, mimeType)'
+                    q=f"name contains '{query}'",
+                    pageSize=10,
+                    fields="files(id, name)"
                 ).execute()
-
                 files = results.get('files', [])
+
                 if files:
                     for file in files:
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.write(f"📄 {file['name']}")
-                        with col2:
-                            file_content = download_file(drive_service, file['id'], file['name'])
-                            st.download_button(
-                                label="Download",
-                                data=file_content,
-                                file_name=file['name'],
-                                mime=file['mimeType']
-                            )
+                        st.write(f"Document: {file['name']} (ID: {file['id']})")
                 else:
                     st.write("Geen documenten gevonden.")
 
