@@ -86,6 +86,7 @@ def authenticate_google_drive():
     return build('drive', 'v3', credentials=creds)
 
 
+
 def handle_google_auth():
     try:
         client_config = st.secrets["client_secrets"]["web"]
@@ -98,8 +99,8 @@ def handle_google_auth():
         query_params = st.query_params
         code = query_params.get("code", [None])[0]
         state = query_params.get("state", [None])[0]
-        stored_state = query_params.get("auth_state", [None])[0]
-        
+        stored_state = st.session_state.get('state')
+
         if code is None:
             st.error("No authorization code found in the URL parameters.")
             return
@@ -109,16 +110,10 @@ def handle_google_auth():
             st.set_query_params()  # Clear query params
             return
 
-        token = flow.fetch_token(code=code)
-        
-        st.session_state.credentials = {
-            'token': token['access_token'],
-            'refresh_token': token.get('refresh_token'),
-            'token_uri': client_config['token_uri'],
-            'client_id': client_config['client_id'],
-            'client_secret': client_config['client_secret'],
-            'scopes': ['https://www.googleapis.com/auth/drive.file']
-        }
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+
+        st.session_state['credentials'] = creds
         st.success("Successfully authenticated!")
         st.set_query_params()  # Clear query params
         st.rerun()
@@ -129,6 +124,7 @@ def handle_google_auth():
         st.write("Traceback:", traceback.format_exc())
         st.write("Query parameters:", st.query_params)
         st.write("Session state keys:", list(st.session_state.keys()))
+
 
 def download_file(drive_service, file_id, file_name):
     request = drive_service.files().get_media(fileId=file_id)
@@ -146,7 +142,7 @@ def main():
     if st.button("Clear Session State"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.query_params()
+        st.set_query_params()
         st.success("Session state cleared. Please refresh the page.")
 
     # Ensure secrets are accessed properly
@@ -163,7 +159,7 @@ def main():
         return
 
     if "code" in query_params and "state" in query_params:
-        authenticate_google_drive()
+        handle_google_auth()
     elif 'credentials' not in st.session_state:
         drive_service = authenticate_google_drive()
         if not drive_service:
@@ -272,3 +268,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
