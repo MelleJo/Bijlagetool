@@ -237,4 +237,4 @@ elif selected == "Instellingen":
 
 # Footer
 st.markdown("---")
-st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf") 
+st.markdown("© 2023 Bijlagetool | Ontwikkeld door Uw Bedrijf")
