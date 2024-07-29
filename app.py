@@ -106,7 +106,7 @@ def handle_google_auth():
 
         if state is None or state != stored_state:
             st.error("Invalid state parameter. Please try authenticating again.")
-            st.experimental_set_query_params()  # Clear query params
+            st.set_query_params()  # Clear query params
             return
 
         token = flow.fetch_token(code=code)
@@ -120,7 +120,7 @@ def handle_google_auth():
             'scopes': ['https://www.googleapis.com/auth/drive.file']
         }
         st.success("Successfully authenticated!")
-        st.experimental_set_query_params()  # Clear query params
+        st.set_query_params()  # Clear query params
         st.rerun()
     except Exception as e:
         st.error(f"An error occurred during authentication: {str(e)}")
@@ -146,7 +146,7 @@ def main():
     if st.button("Clear Session State"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.experimental_set_query_params()
+        st.set_query_params()
         st.success("Session state cleared. Please refresh the page.")
 
     # Ensure secrets are accessed properly
