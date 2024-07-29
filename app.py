@@ -61,21 +61,21 @@ def authenticate_google_drive():
         # Use secrets from st.secrets
         client_secrets = {
             "web": {
-                "client_id": st.secrets["client_secrets"]["client_id"],
-                "project_id": st.secrets["client_secrets"]["project_id"],
-                "auth_uri": st.secrets["client_secrets"]["auth_uri"],
-                "token_uri": st.secrets["client_secrets"]["token_uri"],
-                "auth_provider_x509_cert_url": st.secrets["client_secrets"]["auth_provider_x509_cert_url"],
-                "client_secret": st.secrets["client_secrets"]["client_secret"],
-                "redirect_uris": st.secrets["client_secrets"]["redirect_uris"],
-                "javascript_origins": st.secrets["client_secrets"]["javascript_origins"]
+                "client_id": st.secrets["client_secrets"]["web"]["client_id"],
+                "project_id": st.secrets["client_secrets"]["web"]["project_id"],
+                "auth_uri": st.secrets["client_secrets"]["web"]["auth_uri"],
+                "token_uri": st.secrets["client_secrets"]["web"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["client_secrets"]["web"]["auth_provider_x509_cert_url"],
+                "client_secret": st.secrets["client_secrets"]["web"]["client_secret"],
+                "redirect_uris": st.secrets["client_secrets"]["web"]["redirect_uris"],
+                "javascript_origins": st.secrets["client_secrets"]["web"]["javascript_origins"]
             }
         }
 
         flow = Flow.from_client_config(
             client_secrets,
             scopes=['https://www.googleapis.com/auth/drive.metadata.readonly'],
-            redirect_uri=st.secrets["client_secrets"]["redirect_uris"][0]
+            redirect_uri=st.secrets["client_secrets"]["web"]["redirect_uris"][0]
         )
 
         auth_url, state = flow.authorization_url(prompt='consent')
@@ -96,22 +96,23 @@ def authenticate_google_drive():
 
 
 
+
 def handle_google_auth():
     try:
         client_config = {
-            "client_id": st.secrets["client_secrets"]["client_id"],
-            "project_id": st.secrets["client_secrets"]["project_id"],
-            "auth_uri": st.secrets["client_secrets"]["auth_uri"],
-            "token_uri": st.secrets["client_secrets"]["token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["client_secrets"]["auth_provider_x509_cert_url"],
-            "client_secret": st.secrets["client_secrets"]["client_secret"],
-            "redirect_uris": st.secrets["client_secrets"]["redirect_uris"],
-            "javascript_origins": st.secrets["client_secrets"]["javascript_origins"]
+            "client_id": st.secrets["client_secrets"]["web"]["client_id"],
+            "project_id": st.secrets["client_secrets"]["web"]["project_id"],
+            "auth_uri": st.secrets["client_secrets"]["web"]["auth_uri"],
+            "token_uri": st.secrets["client_secrets"]["web"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["client_secrets"]["web"]["auth_provider_x509_cert_url"],
+            "client_secret": st.secrets["client_secrets"]["web"]["client_secret"],
+            "redirect_uris": st.secrets["client_secrets"]["web"]["redirect_uris"],
+            "javascript_origins": st.secrets["client_secrets"]["web"]["javascript_origins"]
         }
         flow = Flow.from_client_config(
             {"web": client_config},
             scopes=['https://www.googleapis.com/auth/drive.file'],
-            redirect_uri=st.secrets["client_secrets"]["redirect_uris"][0]
+            redirect_uri=st.secrets["client_secrets"]["web"]["redirect_uris"][0]
         )
         
         query_params = st.query_params
@@ -142,6 +143,7 @@ def handle_google_auth():
         st.write("Traceback:", traceback.format_exc())
         st.write("Query parameters:", st.query_params)
         st.write("Session state keys:", list(st.session_state.keys()))
+
 
 
 def main():
