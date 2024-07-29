@@ -155,7 +155,7 @@ def main():
     if st.button("Clear Session State"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.set_query_params()
+        st.query_params()
         st.success("Session state cleared. Please refresh the page.")
 
     # Ensure secrets are accessed properly
