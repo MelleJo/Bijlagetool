@@ -56,18 +56,16 @@ def authenticate_google_drive():
     try:
         client_config = st.secrets["client_secrets"]["web"]
         
-        # Check if the required fields are present
-        required_fields = ["client_id", "client_secret", "auth_uri", "token_uri"]
-        for field in required_fields:
-            if field not in client_config:
-                raise ValueError(f"Missing required field in client configuration: {field}")
-        
-        flow = Flow.from_client_config(
-            client_config,
-            scopes=['https://www.googleapis.com/auth/drive.readonly']
+        # Manually create the Flow object
+        flow = Flow(
+            oauth2session=None,
+            client_id=client_config['client_id'],
+            client_secret=client_config['client_secret'],
+            scopes=['https://www.googleapis.com/auth/drive.readonly'],
+            redirect_uri='https://bijlagetool.streamlit.app/',
+            authorization_url='https://accounts.google.com/o/oauth2/auth',
+            token_url='https://oauth2.googleapis.com/token',
         )
-        
-        flow.redirect_uri = 'https://bijlagetool.streamlit.app/'
 
         if 'credentials' not in st.session_state:
             authorization_url, _ = flow.authorization_url(prompt='consent')
@@ -80,9 +78,6 @@ def authenticate_google_drive():
     except KeyError as e:
         st.error(f"Error in client secrets configuration: {str(e)}")
         st.write("Please check your client_secrets configuration in Streamlit secrets.")
-    except ValueError as e:
-        st.error(f"Error in client configuration: {str(e)}")
-        st.write("Please ensure your client_secrets are correctly formatted for a web application.")
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
         st.write("Please check your configuration and try again.")
