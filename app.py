@@ -10,7 +10,12 @@ import io
 # Set page config (must be the first Streamlit command)
 st.set_page_config(page_title="Bijlagetool", page_icon="📎", layout="wide")
 
-st.write("Full client config:", st.secrets["client_secrets"])
+# Ensure secrets are accessed properly
+try:
+    client_secrets = st.secrets["client_secrets"]
+    st.write("Full client config:", client_secrets)
+except Exception as e:
+    st.error(f"Error accessing client secrets: {e}")
 
 # Custom CSS to inject
 st.markdown("""
